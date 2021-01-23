@@ -1,8 +1,6 @@
 #ifndef __DEF_QUEUE_H___
 #define __DEF_QUEUE_H___
 
-
-
 #include "concurrentqueue.h"
 
 #include <vector>
@@ -32,21 +30,14 @@ namespace chatpp {
 			_data_cond.notify_one();
 		}
 
-		std::pair<std::string, std::string>
-			wait_pop_message() {
-
+		std::pair<std::string, std::string> wait_pop_message() {
 			std::unique_lock<std::mutex> lk(_mut);
-
 			std::pair<std::string, std::string> message;
-
-			_data_cond.wait(lk, [this] {return messages_queue.is_lock_free() && messages_queue.size_approx() > 0; });
-
+			_data_cond.wait(lk, [this] { return messages_queue.is_lock_free() && messages_queue.size_approx() > 0; });
 			bool res = messages_queue.try_dequeue(message);
-
 			if (res) {
-				return std::move(message);
+				return message;
 			}
-
 			//should not happen
 			return wait_pop_message();
 		}

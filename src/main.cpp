@@ -1,4 +1,5 @@
 #include <thread>
+#include <chrono>
 #include "server.hpp"
 #include "client.hpp"
 #include "CLI11.hpp"
@@ -6,6 +7,8 @@
 #include "queue.hpp"
 #include "rsa.hpp"
 #include "rang.hpp"
+
+using namespace std::chrono_literals;
 
 int main(int argc, char* argv[]) {
 	// Create a server endpoint
@@ -41,14 +44,22 @@ int main(int argc, char* argv[]) {
 		chatpp::chat_client cclient;
 
 		cserver.start(port);
-		
+		std::cout << rang::fg::yellow << "Listening on port : " << port << std::endl << rang::fg::reset;
+
+
 		std::string nickname;
 		std::cout << rang::style::bold << rang::fg::blue << "Type your nickname : > " << rang::fg::reset;
 		std::getline(std::cin, nickname);
 		std::cout  << rang::style::bold << rang::fg::blue << "Type the destination URI : > " << rang::fg::reset;
 		std::getline(std::cin, URI);
 		cclient.start(URI);
+		//wait some time until the connection is established.
+		while (cclient.getStatus() == chatpp::chat_client::status::connecting) {
+			std::this_thread::sleep_for(200ms);
+		};
+
 		cclient.send_nickname(nickname);
+		
 		std::thread t([&]() { 
 			while (true) {
 				auto [nickname, msg] = cserver.msg_queue_.wait_pop_message();

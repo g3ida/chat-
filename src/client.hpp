@@ -16,30 +16,34 @@
 
 using namespace std::string_literals;
 
-
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 
-
-// pull out the type of messages sent by our config
-typedef websocketpp::config::asio_client::message_type::ptr message_ptr;
-
-
 namespace chatpp {
 	class chat_client {
 	public :
+		using client_t = websocketpp::client<websocketpp::config::asio_client>;
+		using client_connection_ptr_t = websocketpp::client<websocketpp::config::asio_client>::connection_ptr;
+		using client_message_ptr_t = websocketpp::config::asio_client::message_type::ptr;
 
-		chat_client() {
-			client_.set_access_channels(websocketpp::log::alevel::all);
+		enum class status {
+			open,
+			closed,
+			failed,
+			connecting
+		};
+
+		chat_client(websocketpp::log::level log_level = websocketpp::log::alevel::none) {
+			client_.set_access_channels(log_level);
 			client_.clear_access_channels(websocketpp::log::alevel::frame_payload);
-
 			// Initialize ASIO
 			client_.init_asio();
-
 			// Register our message handler
 			client_.set_message_handler(bind(&chat_client::on_message, this, &client_, ::_1, ::_2));
-
+			client_.set_open_handler(websocketpp::lib::bind(&chat_client::on_open, this, &client_, ::_1));
+			client_.set_close_handler(websocketpp::lib::bind(&chat_client::on_close, this, &client_, ::_1));
+			client_.set_fail_handler(websocketpp::lib::bind(&chat_client::on_fail, this, &client_, ::_1));
 		}
 
 		void start(std::string URI) {
@@ -47,39 +51,21 @@ namespace chatpp {
 				websocketpp::lib::error_code ec;
 				cnx_ptr_ = client_.get_connection(URI, ec);
 				if (ec) {
-					std::cout << "could not create connection because: " << ec.message() << std::endl;
-					throw "could not create connection";
+					status_ = status::failed;
+					status_msg_ = ec.message();
+					throw new websocketpp::exception(ec);
 				}
-
 				// Note that connect here only requests a connection. No network messages are
 				// exchanged until the event loop starts running in the next line.
 				cnx_ptr_ = client_.connect(cnx_ptr_);
-				
+				status_ = status::connecting;
 				std::thread t([this]() { client_.run(); });
 				t.detach();
 			}
 			catch (websocketpp::exception const& e) {
-				std::cout << e.what() << std::endl;
+				status_ = status::failed;
+				status_msg_ = e.m_code.message();
 				throw;
-			}
-		}
-
-
-
-		// This message handler will be invoked once for each incoming message. It
-		// prints the message and then sends a copy of the message back to the server.
-		void on_message(websocketpp::client<websocketpp::config::asio_client>* c, websocketpp::connection_hdl hdl, message_ptr msg) {
-			
-			//std::cout << "on_message called with hdl: " << hdl.lock().get()
-			//	<< " and message: " << msg->get_payload()
-			//	<< std::endl;
-
-
-			websocketpp::lib::error_code ec;
-
-			c->send(hdl, msg->get_payload(), msg->get_opcode(), ec);
-			if (ec) {
-				std::cout << "Echo failed because: " << ec.message() << std::endl;
 			}
 		}
 
@@ -97,18 +83,59 @@ namespace chatpp {
 			nlohmann::json msg_json_object;
 			to_json(msg_json_object, message(message::type::nickname, nickname));
 			std::string json_str = msg_json_object.dump();
-
-			std::cout << json_str << std::endl;
-			std::cout << json_str.size() << std::endl;
-			if (cnx_ptr_) {
-				std::cout << cnx_ptr_ << "valid]\n";
-			}
 			client_.send(cnx_ptr_->get_handle(), json_str.data(), json_str.size() + 1, websocketpp::frame::opcode::text);
 		}
 
+		status getStatus() {
+			return status_;
+		}
+
+		std::string getServerStr() {
+			return server_str_;
+		}
+
+		std::string getErrorMessage() {
+			return status_msg_;
+		}
+
 	private :
-		websocketpp::client<websocketpp::config::asio_client>::connection_ptr cnx_ptr_;
+
+		void on_open(client_t* client, websocketpp::connection_hdl hdl) {
+			status_ = status::open;
+			client_t::connection_ptr con = client->get_con_from_hdl(hdl);
+			server_str_ = con->get_response_header("Server");
+		}
+
+		void on_close(client_t* client, websocketpp::connection_hdl hdl) {
+			status_ = status::closed;
+			client_t::connection_ptr con = client->get_con_from_hdl(hdl);
+			std::stringstream s;
+			s << "close code: " << con->get_remote_close_code() << " ("
+				<< websocketpp::close::status::get_string(con->get_remote_close_code())
+				<< "), close reason: " << con->get_remote_close_reason();
+			server_str_ = s.str();
+		}
+
+		void on_fail(client_t* client, websocketpp::connection_hdl hdl) {
+			status_ = status::failed;
+			client_t::connection_ptr con = client->get_con_from_hdl(hdl);
+			server_str_ = con->get_response_header("Server");
+			status_msg_ = con->get_ec().message();
+		}
+
+		void on_message(websocketpp::client<websocketpp::config::asio_client>* c, websocketpp::connection_hdl hdl, client_message_ptr_t msg) {
+			websocketpp::lib::error_code ec;
+			c->send(hdl, msg->get_payload(), msg->get_opcode(), ec);
+			if (ec) {
+				status_msg_ = ec.message();
+			}
+		}
+
+		status status_ = status::closed;
+		client_connection_ptr_t cnx_ptr_;
 		websocketpp::connection_hdl hdl_;
-		websocketpp::client<websocketpp::config::asio_client> client_;
+		client_t client_;
+		std::string server_str_;
+		std::string status_msg_;
 	};
 }

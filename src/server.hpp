@@ -28,17 +28,16 @@ using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 
 // pull out the type of messages sent by our config
-typedef server::message_ptr message_ptr;
+typedef server::message_ptr client_message_ptr_t;
 
 namespace chatpp {
 	class chat_server {
 	public :
-		chat_server() {
+		chat_server(websocketpp::log::level log_level = websocketpp::log::alevel::none) {
 			// Set logging settings
-			server_.set_access_channels(websocketpp::log::alevel::all);
+			server_.set_access_channels(log_level);
 			server_.clear_access_channels(websocketpp::log::alevel::frame_payload);
 
-			
 			// Initialize Asio
 			server_.init_asio();
 			
@@ -47,12 +46,8 @@ namespace chatpp {
 		}
 
 		// Callback to handle incoming messages
-		void on_recieve_message(server*, websocketpp::connection_hdl hdl, message_ptr msg) {
+		void on_recieve_message(server*, websocketpp::connection_hdl hdl, client_message_ptr_t msg) {
 
-			//std::cout << "on_message called with hdl: " << hdl.lock().get()
-			//	<< " and message: " << msg->get_payload()
-			//	<< std::endl;
-			
 			if (msg->get_opcode() == websocketpp::frame::opcode::text) {
 
 				try {
@@ -89,7 +84,6 @@ namespace chatpp {
 
 		void start(int port = 9002) {
 			server_.listen(port);
-
 			// Start the server accept loop
 			server_.start_accept();
 			// Start the ASIO io_service run loop in another thread
@@ -112,13 +106,11 @@ namespace chatpp {
 		}
 
 		message_queue msg_queue_;
-
 	private :
 		std::vector<websocketpp::connection_hdl> handlers_;
 		std::vector<std::string> nicknames_;
 		websocketpp::server<websocketpp::config::asio> server_;
 	};
-
 }
 
 #endif
