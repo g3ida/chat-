@@ -10,6 +10,10 @@ if(WIN32)
   set(CHATTPP_WINSOCK_LIBRARY ws2_32 wsock32)
 endif()
 
+if(UNIX)
+  set(PTHREAD_LIBRARY pthread)
+endif()
+
 add_executable(chatpp main.cpp server.cpp client.cpp message.cpp)
 
-target_link_libraries(chatpp PRIVATE ${CHATTPP_WINSOCK_LIBRARY})
+target_link_libraries(chatpp PRIVATE ${CHATTPP_WINSOCK_LIBRARY} ${PTHREAD_LIBRARY})
