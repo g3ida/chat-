@@ -1,21 +1,20 @@
 #ifndef __DEF_QUEUE_H___
 #define __DEF_QUEUE_H___
 
+#ifdef _WIN32
+	#include <winsock2.h>
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+# pragma once
+#endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
+
 #include "concurrentqueue.h"
 
-#include <vector>
 #include <thread>
 #include <mutex>
 #include <string>
-#include <map>
 #include <condition_variable>
-
-#ifndef ASIO_STANDALONE
-#define ASIO_STANDALONE
-#define _WEBSOCKETPP_CPP11_TYPE_TRAITS_
-#endif
-
-#include <websocketpp/server.hpp>
 
 namespace chatpp {
 	class message_queue {

@@ -1,12 +1,11 @@
-#include <thread>
-#include <chrono>
-#include "server.hpp"
-#include "client.hpp"
-#include "CLI11.hpp"
-#include "json/json.hpp"
-#include "queue.hpp"
-#include "rsa.hpp"
 #include "rang.hpp"
+#include <chrono>
+#include <thread>
+#include "queue.hpp"
+#include "client.hpp"
+#include "server.hpp"
+#include "CLI11.hpp"
+#include "rsa.hpp"
 
 using namespace std::chrono_literals;
 

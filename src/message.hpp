@@ -1,4 +1,13 @@
-#pragma once
+#ifndef __DEF_MESSAGE_H___
+#define __DEF_MESSAGE_H___
+
+#ifdef _WIN32
+	#include <winsock2.h>
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+# pragma once
+#endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <string>
 #include <optional>
@@ -13,27 +22,15 @@ namespace chatpp {
 			nickname,
 			text
 		};
-
 		message() = default;
 		message(const message&) = default;
-		message(type t, std::string content, std::optional<unsigned int> tt = std::nullopt) : 
-			message_type(t), content(content) {
-			if (tt) {
-				timestamps = tt.value();
-			}
-			else {
-				std::time_t now = std::time(0);
-				std::tm* now_tm = std::gmtime(&now);
-				timestamps = static_cast<decltype(timestamps)>(std::mktime(now_tm));
-			}
-		}
-
+		message(type t, std::string content, std::optional<unsigned int> tt = std::nullopt);
 		type message_type;
 		std::string content;
 		unsigned int timestamps;
 	};
 
-	void to_json(nlohmann::json& j, const message& m) {
+	inline void to_json(nlohmann::json& j, const message& m) {
 		j = nlohmann::json{ 
 			{"type", static_cast<int>(m.message_type)},
 			{"content", m.content},
@@ -41,9 +38,10 @@ namespace chatpp {
 		};
 	}
 
-	void from_json(const nlohmann::json& j, message& m) {
-		j.at("type").get_to(static_cast<message::type>(m.message_type));
+	inline void from_json(const nlohmann::json& j, message& m) {
+		j.at("type").get_to(m.message_type);
 		j.at("content").get_to(m.content);
 		j.at("timestamps").get_to(m.timestamps);
 	}
 }
+#endif

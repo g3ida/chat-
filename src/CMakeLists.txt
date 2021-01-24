@@ -6,4 +6,10 @@ set( CMAKE_CXX_EXTENSIONS OFF )
 
 project(chatpp)
 
-add_executable( chatpp main.cpp)
+if(WIN32)
+  set(CHATTPP_WINSOCK_LIBRARY ws2_32 wsock32)
+endif()
+
+add_executable(chatpp main.cpp server.cpp client.cpp message.cpp)
+
+target_link_libraries(chatpp PRIVATE ${CHATTPP_WINSOCK_LIBRARY})

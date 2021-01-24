@@ -1,12 +1,12 @@
 #pragma once
 
-#include <iostream>
+/*#include <iostream>
 #include <cstdint>
 #include <fstream>
 #include <algorithm>
 #include <string>
 #include <map>
-#include <string.h>
+#include <string.h>*/
 /*Author: Ali Hassaan Mughal*/
 /* I am in this program finding the p and the q variables,  -- 
 these  variables form e and f and d and then give me the key value pair for public and the private keys*/
